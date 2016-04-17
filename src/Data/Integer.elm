@@ -1,14 +1,16 @@
 module Data.Integer
-    ( test
-    , testResult
-    , Integer
+    ( Integer
+    , max_digit_value
     , fromInt
     , fromString
     , toString
     , add
     , sub
-    , opposite
+    , negate
     , mul
+    , divmod
+    , unsafeDivmod
+    , abs
     , compare
     , gt
     , gte
@@ -18,6 +20,9 @@ module Data.Integer
     , neq
     , max
     , min
+    , zero
+    , one
+    , minusOne
     ) where
 
 
@@ -28,8 +33,10 @@ module Data.Integer
 @docs toString
 @docs add
 @docs sub
-@docs opposite
+@docs negate
 @docs mul
+@docs divmod
+@docs unsafeDivmod
 @docs compare
 @docs gt
 @docs gte
@@ -39,8 +46,12 @@ module Data.Integer
 @docs neq
 @docs max
 @docs min
-@docs test
-@docs testResult
+@docs abs
+@docs max_digit_value
+@docs zero
+@docs one
+@docs minusOne
+
 -}
 
 import String
@@ -48,6 +59,7 @@ import Maybe exposing (Maybe)
 import Result exposing (Result)
 import Char
 import Basics
+import Debug
 
 {- The sign of the integer -}
 type Sign
@@ -72,7 +84,8 @@ type Integer = Integer (Sign, Magnitude)
 type IntegerNotNormalised = IntegerNotNormalised (Sign, MagnitudeNotNormalised)
 
 
-{- Enough to hold digit * digit without overflowing to double -}
+{-| Enough to hold digit * digit without overflowing to double -}
+max_digit_value : Int
 max_digit_value = 1000000
 
 
@@ -80,7 +93,7 @@ max_digit_value = 1000000
 fromInt : Int -> Integer
 fromInt x =
     let sign = if x < 0 then Negative else Positive in
-    normalise <| IntegerNotNormalised (sign, MagnitudeNotNormalised [abs x])
+    normalise <| IntegerNotNormalised (sign, MagnitudeNotNormalised [Basics.abs x])
 
 
 {-| Makes an Integer from a String -}
@@ -263,18 +276,23 @@ add a b =
 
     
 {-| Changes the sign of an Integer -}
-opposite : Integer -> Integer
-opposite (Integer (s, m)) =
+negate : Integer -> Integer
+negate (Integer (s, m)) =
     let newsign = case s of
                   Positive -> Negative
                   Negative -> Positive
     in
     normalise (toPositiveSign (Integer (newsign, m)))
 
+
+{-| Absolute value -}
+abs : Integer -> Integer
+abs (Integer (s, m)) = Integer (Positive, m)
+
         
 {-| Substracts the second Integer from the first -}
 sub : Integer -> Integer -> Integer
-sub a b = add a (opposite b)
+sub a b = add a (negate b)
 
 
 {-| Multiplies two Integers -}
@@ -351,12 +369,14 @@ lt a b =
         LT -> True
         _ -> False
 
+
 {-| Greater than -}
 gt : Integer -> Integer -> Bool
 gt a b =
     case compare a b of
         GT -> True
         _ -> False
+
 
 {-| Greater than or equals -}
 gte : Integer -> Integer -> Bool
@@ -366,6 +386,7 @@ gte a b =
         EQ -> True
         _ -> False
 
+
 {-| Less than or equals -}
 lte : Integer -> Integer -> Bool
 lte a b =
@@ -373,6 +394,7 @@ lte a b =
         LT -> True
         EQ -> True
         _ -> False
+
 
 {-| Returns the largest of two Integers -}
 max : Integer -> Integer -> Integer
@@ -382,6 +404,7 @@ max a b =
         EQ -> a
         LT -> b
 
+
 {-| Returns the smallest of two Integers -}
 min : Integer -> Integer -> Integer
 min a b =
@@ -389,6 +412,7 @@ min a b =
         LT -> a
         EQ -> a
         GT -> b
+
 
 type MagnitudePairReverseOrder = MagnitudePairReverseOrder (List (Digit, Digit))
 
@@ -437,128 +461,94 @@ toString (Integer (s, Magnitude m)) =
     sign ++ revmagnitudeToString (List.reverse m)
 
 
-{-| True if all the tests pass -}
-testResult : () -> Bool
-testResult () =
-    let t = test ()
-        all x = case x of
-                    [] -> True
-                    (_, False) :: xs -> False
-                    (_, True) :: xs -> all xs in
-    all t
+range : Int -> Int -> List Int
+range a b =
+    if a == b
+    then [a]
+    else a :: range (a+1) b
 
 
-{-| Testsuite list of (description, True iif the test has passed) -}
-test : () -> List (String, Bool)
-test () =
-    [ ("digit size",
-        max_digit_value * max_digit_value /= (max_digit_value * max_digit_value) + 1)
-    , ("fromInt 1 " ++ toString (fromInt 1),
-        fromInt 1 == Integer (Positive, Magnitude [1]))
-    , ("fromInt 2 " ++ toString (fromInt -1),
-        fromInt -1 == Integer (Negative, Magnitude [1]))
-    , ("dropWhile 1",
-        dropWhile (\x -> x == 0) [1, 2, 3] == [1, 2, 3])
-    , ("dropWhile 2",
-        dropWhile (\x -> x == 0) [0, 2, 3] == [2, 3])
-    , ("dropWhile 3",
-        dropWhile (\x -> x == 0) [1, 0, 3] == [1, 0, 3])
-    , ("dropWhile 4",
-        dropWhile (\x -> x /= 0) [] == [])
-    , ("toPositiveSign 1 " ++
-        toString (fromInt -1),
-        toPositiveSign (fromInt -1) == IntegerNotNormalised (Positive, MagnitudeNotNormalised [-1]))
-    , ("toPositiveSign 2 " ++
-        toString (fromInt 1),
-        toPositiveSign (fromInt 1) == IntegerNotNormalised (Positive, MagnitudeNotNormalised [1]))
-    , ("sameSize 1",
-        sameSize (Magnitude [1, 2, 3]) (Magnitude [1, 2]) == MagnitudePair([(1, 1), (2, 2), (3, 0)]))
-    , ("normaliseMagnitude 1",
-        normaliseMagnitude (MagnitudeNotNormalised [1, 2, 3]) == Magnitude [1, 2, 3])
-    , ("normaliseMagnitude 2",
-        normaliseMagnitude (MagnitudeNotNormalised [1, 0, 0]) == Magnitude [1])
-    , ("normaliseMagnitude 3",
-        normaliseMagnitude (MagnitudeNotNormalised [-1]) == Magnitude [max_digit_value - 1, -1])
-    , ("normaliseMagnitude 4",
-        normaliseMagnitude (MagnitudeNotNormalised [-1, 1]) == Magnitude [max_digit_value - 1])
-    , ("add 1 ",
-        (fromInt 1) `add` (fromInt 2) == (fromInt 3))
-    , ("opposite 1 " ++
-        toString (opposite (fromInt -1)),
-        opposite (fromInt -1) == fromInt 1)
-    , ("opposite 2 " ++
-        toString (opposite (fromInt 1)),
-        opposite (fromInt 1) == fromInt -1)
-    , ("sub 1 " ++
-        toString ((fromInt 1) `sub` (fromInt 2)),
-        (fromInt 1) `sub` (fromInt 2) == (fromInt -1))
-    , ("mul 1 ",
-        (fromInt 3) `mul` (fromInt 2) == (fromInt 6))
-    , ("mul 2 ",
-        (fromInt (3 * max_digit_value)) `mul` (fromInt (2 * max_digit_value)) == Integer (Positive, Magnitude [0, 0, 6]))
-    , ("mul 3 ",
-        Integer (Positive, Magnitude [2, 2]) `mul` Integer (Negative, Magnitude [2, 2]) == Integer (Negative, Magnitude [4, 8, 4]))
-    , ("mul 4",
-        (fromInt 1234567890) `mul` (fromInt 1234567890) == Integer (Positive, Magnitude (List.reverse [1,524157,875019,052100])))
-    , ("mul 5",
-        (fromInt 111111111) `mul` (fromInt 111111111) == Integer (Positive, Magnitude (List.reverse [12345,678987,654321])))
-    , ("toString 1 " ++ (toString <| Integer (Positive, Magnitude (List.reverse [1,524157,875019,052100]))),
-        "1524157875019052100" == (toString <| Integer (Positive, Magnitude (List.reverse [1,524157,875019,052100]))))
-    , ("toString 2 " ++ (toString <| Integer (Negative, Magnitude (List.reverse [1,524157,875019,052100]))),
-        "-1524157875019052100" == (toString <| Integer (Negative, Magnitude (List.reverse [1,524157,875019,052100]))))
-    , ("toString 3 " ++ (toString <| Integer (Positive, Magnitude [])),
-        "-0" == (toString <| Integer (Negative, Magnitude [])))
-    , ("toString 4 " ++ (toString <| Integer (Positive, Magnitude [0])),
-        "0" == (toString <| Integer (Positive, Magnitude [0])))
-    , ("fromString 1",
-        Just (fromInt 1) == fromString "1")
-    , ("fromString 2",
-        Just (fromInt -1) == fromString "-1")
-    , ("fromString 3",
-        fromString "-a" == Nothing)
-    , ("fromString 4",
-        fromString "1234567890" == Just (Integer (Positive, Magnitude [567890, 1234])))
-    , ("max 1",
-        max (fromInt 1234567890) (fromInt 3) == fromInt 1234567890)
-    , ("max 2",
-        max (fromInt 1) (fromInt 3) == fromInt 3)
-    , ("min 1",
-        min (fromInt 1234567890) (fromInt 3) == fromInt 3)
-    , ("min 2",
-        min (fromInt 1) (fromInt 3) == fromInt 1)
-    , ("compare 1",
-        compare (fromInt 1234567890) (fromInt 3) == GT)
-    , ("compare 2",
-        compare (fromInt 3) (fromInt 3) == EQ)
-    , ("compare 3",
-        compare (fromInt 1) (fromInt 3) == LT)
-    , ("gt 1",
-        gt (fromInt 1234567890) (fromInt 3) == True)
-    , ("gt 2",
-        gt (fromInt 3) (fromInt 3) == False)
-    , ("gt 3",
-        gt (fromInt 1) (fromInt 3) == False)
-    , ("gte 1",
-        gte (fromInt 1234567890) (fromInt 3) == True)
-    , ("gte 2",
-        gte (fromInt 3) (fromInt 3) == True)
-    , ("gte 3",
-        gte (fromInt 1) (fromInt 3) == False)
-    , ("eq 1",
-        eq (fromInt 1234567890) (fromInt 3) == False)
-    , ("eq 2",
-        eq (fromInt 3) (fromInt 3) == True)
-    , ("lt 1",
-        lt (fromInt 1234567890) (fromInt 3) == False)
-    , ("lt 2",
-        lt (fromInt 3) (fromInt 3) == False)
-    , ("lt 3",
-        lt (fromInt 1) (fromInt 3) == True)
-    , ("lte 1",
-        lte (fromInt 1234567890) (fromInt 3) == False)
-    , ("lte 2",
-        lte (fromInt 3) (fromInt 3) == True)
-    , ("lte 3",
-        lte (fromInt 1) (fromInt 3) == True)
-    ]
+dividers : List Integer
+dividers =
+    let log = Basics.logBase 2 (Basics.toFloat max_digit_value)
+        log_i = (Basics.truncate log) + 1
+        exp_values = List.reverse (range 0 log_i)
+        int_values = List.map (\x -> 2 ^ x) exp_values
+    in
+    List.map fromInt int_values
 
+
+pad_digits : Int -> Integer
+pad_digits n =
+    if n == 0
+    then fromInt 1
+    else (pad_digits (n-1)) `mul` (fromInt max_digit_value)
+
+
+divmod_digit : Integer -> List Integer -> Integer -> Integer -> (Integer, Integer)
+divmod_digit padding to_test a b =
+    case to_test of
+        [] ->
+            (fromInt 0, a)
+        x :: xs ->
+            let candidate = x `mul` b `mul` padding
+                (newdiv, newmod) = if candidate `lte` a
+                                   then (x `mul` padding, a `sub`candidate)
+                                   else (fromInt 0, a)
+                (restdiv, restmod) = divmod_digit padding xs newmod b
+            in
+            (newdiv `add` restdiv, restmod)
+
+
+divmod' : Int -> Integer -> Integer -> (Integer, Integer)
+divmod' n a b =
+    if n == 0
+    then divmod_digit (pad_digits n) dividers a b
+    else
+        let (cdiv, cmod) = divmod_digit (pad_digits n) dividers a b
+            (rdiv, rmod) = divmod' (n-1) cmod b
+        in
+            (cdiv `add` rdiv, rmod)
+
+
+{-| Division and modulus -}
+divmod : Integer -> Integer -> Maybe (Integer, Integer)
+divmod a b =
+    if b `eq` zero
+    then Nothing
+    else
+        let (Integer (s1, Magnitude m1)) = a
+            (Integer (s2, Magnitude m2)) = b
+            cand_l = (List.length m1) - (List.length m2) + 1
+            l = if cand_l < 0 then 0 else cand_l
+            sign = case (s1, s2) of
+                        (Positive, Positive) -> Positive
+                        (Negative, Negative) -> Positive
+                        _ -> Negative
+            (Integer (_, d), Integer (_, m)) = divmod' l (abs a) (abs b)
+        in
+        Just (Integer (sign, d), Integer (s1, m))
+
+
+{-| divmod that returns the pair of values, or crashes if the divisor is zero -}
+unsafeDivmod : Integer -> Integer -> (Integer, Integer)
+unsafeDivmod a b =
+    let v = divmod a b in
+    case v of
+        Just r -> r
+        Nothing -> Debug.crash "Divide by zero"
+
+
+{-| Number 0 -}
+zero : Integer
+zero = fromInt 0
+
+
+{-| Number 1 -}
+one : Integer
+one = fromInt 1
+
+
+{-| Number -1 -}
+minusOne : Integer
+minusOne = fromInt -1
