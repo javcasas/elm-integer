@@ -124,6 +124,15 @@ qcAbs =
       `for` integer
     ]
 
+qcSign : Claim
+qcSign =
+  Check.suite "Quickcheck sign"
+    [ claim "sign definition"
+      `that` (\a -> if a `gte` zero then Positive else Negative)
+      `is` (\a -> sign a)
+      `for` integer
+    ]
+
 toStringTests : Test
 toStringTests =
     suite "toString testsuite"
@@ -199,6 +208,7 @@ allTests =
         , Check.Test.evidenceToTest (quickCheck qcMul)
         , Check.Test.evidenceToTest (quickCheck qcDivMod)
         , Check.Test.evidenceToTest (quickCheck qcAbs)
+        , Check.Test.evidenceToTest (quickCheck qcSign)
         ]
 
 main : Element

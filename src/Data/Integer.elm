@@ -1,5 +1,7 @@
 module Data.Integer
     ( Integer
+    , Sign(Positive, Negative)
+    , sign
     , max_digit_value
     , fromInt
     , fromString
@@ -537,6 +539,10 @@ unsafeDivmod a b =
     case v of
         Just r -> r
         Nothing -> Debug.crash "Divide by zero"
+
+
+sign : Integer -> Sign
+sign (Integer (x, _)) = x
 
 
 {-| Number 0 -}
