@@ -1,4 +1,4 @@
-module Data.Integer
+module Data.Integer exposing
     ( Integer
     , Sign(Positive, Negative)
     , sign
@@ -25,7 +25,7 @@ module Data.Integer
     , zero
     , one
     , minusOne
-    ) where
+    )
 
 
 {-| Infinite digits integers
