@@ -1,10 +1,11 @@
+module Main exposing (..)
+
 import Data.Integer exposing (..)
 import ElmTest exposing (..)
 import Check exposing (quickCheck, Claim, claim, that, is, for)
 import Check.Test
 import Check.Producer exposing (int, tuple, rangeInt)
 import Maybe exposing (Maybe)
-import Graphics.Element exposing (Element)
 
 
 integer : Check.Producer.Producer Integer
@@ -201,5 +202,6 @@ allTests =
         , Check.Test.evidenceToTest (quickCheck qcAbs)
         ]
 
-main : Element
-main = elementRunner allTests
+
+main =
+  runSuiteHtml allTests
