@@ -1,4 +1,4 @@
-module Data.Integer
+module Data.Integer exposing
     ( Integer
     , max_digit_value
     , fromInt
@@ -23,7 +23,7 @@ module Data.Integer
     , zero
     , one
     , minusOne
-    ) where
+    )
 
 
 {-| Infinite digits integers
