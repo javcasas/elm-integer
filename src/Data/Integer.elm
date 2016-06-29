@@ -1,5 +1,7 @@
 module Data.Integer exposing
     ( Integer
+    , Sign(Positive, Negative)
+    , sign
     , max_digit_value
     , fromInt
     , fromString
@@ -27,16 +29,26 @@ module Data.Integer exposing
 
 
 {-| Infinite digits integers
+# The datatype
 @docs Integer
+@docs Sign
+
+# From/To
 @docs fromInt
 @docs fromString
 @docs toString
+
+# Common operations
 @docs add
 @docs sub
 @docs negate
 @docs mul
 @docs divmod
 @docs unsafeDivmod
+@docs abs
+@docs sign
+
+# Comparison
 @docs compare
 @docs gt
 @docs gte
@@ -46,11 +58,14 @@ module Data.Integer exposing
 @docs neq
 @docs max
 @docs min
-@docs abs
-@docs max_digit_value
+
+# Common numbers
 @docs zero
 @docs one
 @docs minusOne
+
+# Internals
+@docs max_digit_value
 
 -}
 
@@ -61,7 +76,7 @@ import Char
 import Basics
 import Debug
 
-{- The sign of the integer -}
+{-| The sign of the integer -}
 type Sign
     = Positive
     | Negative
@@ -537,6 +552,11 @@ unsafeDivmod a b =
     case v of
         Just r -> r
         Nothing -> Debug.crash "Divide by zero"
+
+
+{-| Get the sign of the integer -}
+sign : Integer -> Sign
+sign (Integer (x, _)) = x
 
 
 {-| Number 0 -}
