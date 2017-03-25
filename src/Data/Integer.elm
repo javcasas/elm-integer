@@ -36,7 +36,7 @@ module Data.Integer exposing
 # From/To
 @docs fromInt
 @docs fromString
-@docs toString
+@docs `toString
 
 # Common operations
 @docs add
@@ -69,12 +69,12 @@ module Data.Integer exposing
 
 -}
 
-import String
+import Basics
+import Char
+import Debug
 import Maybe exposing (Maybe)
 import Result exposing (Result)
-import Char
-import Basics
-import Debug
+import String
 
 {-| The sign of the integer -}
 type Sign
@@ -117,21 +117,21 @@ fromString x =
     case String.toList x of
         [] -> Just (fromInt 0)
         '-'::xs ->
-            case fromString' xs of
+            case fromStringPrime xs of
                 Nothing -> Nothing
                 (Just a) -> Just (Integer (Negative, a))
         '+'::xs ->
-            case fromString' xs of
+            case fromStringPrime xs of
                 Nothing -> Nothing
                 (Just a) -> Just (Integer (Positive, a))
         xs ->
-            case fromString' xs of
+            case fromStringPrime xs of
                 Nothing -> Nothing
                 (Just a) -> Just (Integer (Positive, a))
 
 
-fromString' : List Char -> Maybe Magnitude
-fromString' x =
+fromStringPrime : List Char -> Maybe Magnitude
+fromStringPrime x =
     if not <| List.all Char.isDigit x
     then Nothing
     else
@@ -175,32 +175,32 @@ type MagnitudePair = MagnitudePair (List (Digit, Digit))
 
 sameSize : Magnitude -> Magnitude -> MagnitudePair
 sameSize (Magnitude a) (Magnitude b) =
-    let sameSize' a b =
+    let sameSizePrime a b =
         case (a, b) of
             ([], []) -> []
             (a::xa, b::xb) ->
-                (a, b) :: sameSize' xa xb
+                (a, b) :: sameSizePrime xa xb
             (a::xa, []) ->
-                (a, 0) :: sameSize' xa []
+                (a, 0) :: sameSizePrime xa []
             ([], b::xb) ->
-                (0, b) :: sameSize' [] xb
+                (0, b) :: sameSizePrime [] xb
     in
-    MagnitudePair (sameSize' a b)
+    MagnitudePair (sameSizePrime a b)
 
 
-sameSize' : MagnitudeNotNormalised -> MagnitudeNotNormalised -> MagnitudePair
-sameSize' (MagnitudeNotNormalised a) (MagnitudeNotNormalised b) =
-    let sameSize'' a b =
+sameSizePrime : MagnitudeNotNormalised -> MagnitudeNotNormalised -> MagnitudePair
+sameSizePrime (MagnitudeNotNormalised a) (MagnitudeNotNormalised b) =
+    let sameSizeSecond a b =
         case (a, b) of
             ([], []) -> []
             (a::xa, b::xb) ->
-                (a, b) :: sameSize'' xa xb
+                (a, b) :: sameSizeSecond xa xb
             (a::xa, []) ->
-                (a, 0) :: sameSize'' xa []
+                (a, 0) :: sameSizeSecond xa []
             ([], b::xb) ->
-                (0, b) :: sameSize'' [] xb
+                (0, b) :: sameSizeSecond [] xb
     in
-    MagnitudePair (sameSize'' a b)
+    MagnitudePair (sameSizeSecond a b)
 
 
 normalise : IntegerNotNormalised -> Integer
@@ -228,8 +228,8 @@ normalise (IntegerNotNormalised (sx, x)) =
 normaliseDigit : Int -> (Int, Digit)
 normaliseDigit d =
     if d < 0
-    then let (carry, d') = normaliseDigit (d + max_digit_value) in
-        (carry - 1, d')
+    then let (carry, dPrime) = normaliseDigit (d + max_digit_value) in
+        (carry - 1, dPrime)
     else (d // max_digit_value, d `rem` max_digit_value)
 
 
@@ -238,13 +238,13 @@ normaliseDigitList x =
     case x of
         [] -> []
         d :: [] ->
-            let (c, d') = normaliseDigit d in
+            let (c, dPrime) = normaliseDigit d in
             if c /= 0
-            then [d', c]
-            else [d']
+            then [dPrime, c]
+            else [dPrime]
         d :: d2 :: xs ->
-            let (c, d') = normaliseDigit d in
-            d' :: normaliseDigitList (d2 + c :: xs)
+            let (c, dPrime) = normaliseDigit d in
+            dPrime :: normaliseDigitList (d2 + c :: xs)
 
 
 dropWhile : (a -> Bool) -> List a -> List a
@@ -255,7 +255,7 @@ dropWhile f x =
             if f a
             then dropWhile f xs
             else a :: xs
-            
+
 
 dropZeroes : List Digit -> List Digit
 dropZeroes x =
@@ -284,7 +284,7 @@ add : Integer -> Integer -> Integer
 add a b =
     let (IntegerNotNormalised (_, ma)) = toPositiveSign a
         (IntegerNotNormalised (_, mb)) = toPositiveSign b
-        (MagnitudePair (p)) = sameSize' ma mb
+        (MagnitudePair (p)) = sameSizePrime ma mb
         added = List.map (\(x, y) -> x+y) p
     in
     normalise (IntegerNotNormalised (Positive, MagnitudeNotNormalised added))
@@ -515,13 +515,13 @@ divmod_digit padding to_test a b =
             (newdiv `add` restdiv, restmod)
 
 
-divmod' : Int -> Integer -> Integer -> (Integer, Integer)
-divmod' n a b =
+divmodPrime : Int -> Integer -> Integer -> (Integer, Integer)
+divmodPrime n a b =
     if n == 0
     then divmod_digit (pad_digits n) dividers a b
     else
         let (cdiv, cmod) = divmod_digit (pad_digits n) dividers a b
-            (rdiv, rmod) = divmod' (n-1) cmod b
+            (rdiv, rmod) = divmodPrime (n-1) cmod b
         in
             (cdiv `add` rdiv, rmod)
 
@@ -540,7 +540,7 @@ divmod a b =
                         (Positive, Positive) -> Positive
                         (Negative, Negative) -> Positive
                         _ -> Negative
-            (Integer (_, d), Integer (_, m)) = divmod' l (abs a) (abs b)
+            (Integer (_, d), Integer (_, m)) = divmodPrime l (abs a) (abs b)
         in
         Just (Integer (sign, d), Integer (s1, m))
 
