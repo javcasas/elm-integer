@@ -19,15 +19,15 @@ addTests =
         three = fromInt 3
     in
     suite "Add testsuite"
-        [ equals (one `add` two) three
+        [ equals (add one two) three
         ]
 
 qcAdd : Claim
 qcAdd =
   Check.suite "Quickcheck Add"
     [ claim "Conmutative adding"
-      `that` (\(a, b) -> a `add` b)
-      `is` (\(a, b) -> b `add` a)
+      `that` (\(a, b) -> add a b)
+      `is` (\(a, b) -> add b a)
       `for` tuple (integer, integer)
     ]
 
@@ -56,15 +56,15 @@ subTests =
         three = fromInt 3
     in
     suite "Sub testsuite"
-        [ equals (three `sub` two) one
+        [ equals (sub three two) one
         ]
 
 qcSub : Claim
 qcSub =
   Check.suite "Quickcheck Sub"
     [ claim "Conmutative substract"
-      `that` (\(a, b) -> a `sub` b)
-      `is` (\(a, b) -> (Data.Integer.negate (b `sub` a)))
+      `that` (\(a, b) -> sub a b)
+      `is` (\(a, b) -> (Data.Integer.negate (sub b a)))
       `for` tuple (integer, integer)
     ]
 
@@ -75,25 +75,25 @@ mulTests =
         three = fromInt 3
     in
     suite "Mul testsuite"
-        [ equals (three `mul` two) six
-        , equals (three `mul` (Data.Integer.negate two)) (Data.Integer.negate six)
+        [ equals (mul three two) six
+        , equals (mul three (Data.Integer.negate two)) (Data.Integer.negate six)
         ]
 
 qcMul : Claim
 qcMul =
   Check.suite "Quickcheck Mul"
     [ claim "Conmutative multiplication"
-      `that` (\(a, b) -> a `mul` b)
-      `is` (\(a, b) -> b `mul` a)
+      `that` (\(a, b) -> mul a b)
+      `is` (\(a, b) -> mul b a)
       `for` tuple (integer, integer)
     ]
 
 divmodTests : Test
 divmodTests =
     suite "divmod testsuite"
-        [ equals ((fromInt 2000000001) `divmod` (fromInt 2)) (Just (fromInt 1000000000, fromInt 1))
-        , equals ((fromInt 2000000002) `divmod` (fromInt 2)) (Just (fromInt 1000000001, fromInt 0))
-        , equals ((fromInt 20) `divmod` (fromInt 0)) Nothing
+        [ equals (divmod (fromInt 2000000001) (fromInt 2)) (Just (fromInt 1000000000, fromInt 1))
+        , equals (divmod (fromInt 2000000002) (fromInt 2)) (Just (fromInt 1000000001, fromInt 0))
+        , equals (divmod (fromInt 20) (fromInt 0)) Nothing
         ]
 
 qcDivMod : Claim
@@ -101,25 +101,25 @@ qcDivMod =
   Check.suite "Quickcheck divmod"
     [ claim "divmod definition"
       `that` (\(a, b) ->
-            let (c, r) = a `unsafeDivmod` b in
-            (c `mul` b) `add` r
+            let (c, r) = unsafeDivmod a b in
+            add (mul c b) r
         )
       `is` (\(a, b) -> a)
-      `for` tuple (integer, Check.Producer.filter (\x -> x `neq` zero) integer)
+      `for` tuple (integer, Check.Producer.filter (\x -> neq x zero) integer)
     ]
 
 qcAbs : Claim
 qcAbs =
   Check.suite "Quickcheck abs"
     [ claim "abs is always positive"
-      `that` (\a -> (Data.Integer.abs a) `gte` (fromInt 0))
+      `that` (\a -> gte (Data.Integer.abs a) (fromInt 0))
       `is` (\a -> True)
       `for` integer
     , claim "abs definition"
       `that` (\a ->
-            if a `gte` (fromInt 0)
-            then ((Data.Integer.abs a) `eq` a)
-            else ((Data.Integer.abs a) `eq` (Data.Integer.negate a))
+            if (gte a (fromInt 0))
+            then (eq (Data.Integer.abs a) a)
+            else (eq (Data.Integer.abs a) (Data.Integer.negate a))
         )
       `is` (\a -> True)
       `for` integer
@@ -129,7 +129,7 @@ qcSign : Claim
 qcSign =
   Check.suite "Quickcheck sign"
     [ claim "sign definition"
-      `that` (\a -> if a `gte` zero then Positive else Negative)
+      `that` (\a -> if (gte a zero) then Positive else Negative)
       `is` (\a -> sign a)
       `for` integer
     ]
